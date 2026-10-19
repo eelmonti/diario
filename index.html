@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="color-scheme" content="light dark">
+<title>Nota</title>
+<style>
+  :root {
+    --bg: #fbfaf7; --fg: #23211d; --muted: #8a857b; --line: #e6e2d8;
+    --accent: #3b6ea5; --ok: #4a8a5a; --warn: #b5741f; --err: #b4423a; --card: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17171a; --fg: #e8e6e1; --muted: #8b8a86; --line: #2a2a2f;
+      --accent: #7fa8d6; --ok: #78b88a; --warn: #d9a05b; --err: #e07a72; --card: #1f1f24;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  [hidden] { display: none !important; }
+
+  /* ---------- editor ---------- */
+  .app { display: flex; flex-direction: column; height: 100%; height: 100dvh; }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; padding-top: max(10px, env(safe-area-inset-top));
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0; }
+  .spacer { flex: 1; }
+  .status { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+  .status.dirty .dot { background: var(--warn); }
+  .status.error .dot { background: var(--err); }
+  .status.error { color: var(--err); }
+  button {
+    font: inherit; font-size: 13px; color: var(--fg); background: transparent;
+    border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; cursor: pointer;
+  }
+  button:hover { border-color: var(--muted); }
+  button:disabled { opacity: .6; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  textarea {
+    flex: 1; width: 100%; resize: none; border: 0; outline: 0;
+    background: transparent; color: var(--fg);
+    font: inherit; font-size: 17px; line-height: 1.7;
+    padding: 24px max(16px, calc((100% - 760px) / 2));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    tab-size: 4;
+  }
+  textarea::placeholder { color: var(--muted); }
+  footer {
+    display: flex; gap: 16px; padding: 6px 16px; padding-bottom: max(6px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);
+  }
+  .banner {
+    display: flex; padding: 10px 16px; background: color-mix(in srgb, var(--warn) 14%, var(--bg));
+    border-bottom: 1px solid var(--warn); font-size: 14px; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+
+  /* ---------- login ---------- */
+  .login { min-height: 100%; display: grid; place-items: center; padding: 24px; }
+  .card {
+    width: 100%; max-width: 360px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 28px 24px;
+  }
+  .card h1 { font-size: 18px; margin: 0 0 18px; }
+  .card label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  .card input {
+    width: 100%; font: inherit; padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--fg); outline: none;
+  }
+  .card input:focus { border-color: var(--accent); }
+  .card button { width: 100%; margin-top: 16px; padding: 10px; font-size: 15px; }
+  .err { color: var(--err); font-size: 14px; margin: 12px 0 0; }
+  .hint { color: var(--muted); font-size: 12.5px; margin: 6px 0 0; }
+  .link { background: none; border: 0; padding: 0; width: auto !important; margin: 14px 0 0 !important;
+          color: var(--muted); font-size: 12.5px; text-decoration: underline; cursor: pointer; display: block; }
+</style>
+</head>
+<body>
+
+<!-- ============ SCHERMATA DI ACCESSO ============ -->
+<div class="login" id="loginView">
+  <form class="card" id="loginForm" autocomplete="on">
+    <h1>Nota</h1>
+
+    <div id="setupFields">
+      <label for="repo">Repository GitHub (utente/nome)</label>
+      <input id="repo" type="text" placeholder="mario/nota" autocapitalize="off" autocorrect="off" spellcheck="false">
+
+      <label for="token">Token GitHub</label>
+      <input id="token" type="password" placeholder="github_pat_…" autocomplete="off">
+      <p class="hint">Si inserisce una volta sola per dispositivo (vedi README).</p>
+    </div>
+
+    <label for="password">Password della nota</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+
+    <div id="confirmWrap" hidden>
+      <label for="password2">Ripeti la password</label>
+      <input id="password2" type="password" autocomplete="new-password">
+      <p class="hint">Nota nuova: questa password cifra il testo. Se la perdi, il contenuto non si può recuperare.</p>
+    </div>
+
+    <p class="err" id="loginErr" hidden></p>
+    <button class="primary" type="submit" id="loginBtn">Entra</button>
+    <button class="link" type="button" id="forgetBtn" hidden>Dimentica repository e token su questo dispositivo</button>
+  </form>
+</div>
+
+<!-- ============ EDITOR ============ -->
+<div class="app" id="appView" hidden>
+  <header>
+    <h1>Nota</h1>
+    <div class="spacer"></div>
+    <div class="status" id="status"><span class="dot"></span><span id="statusText">Salvato</span></div>
+    <button type="button" id="saveBtn" title="Salva ora (Ctrl/Cmd+S)">Salva</button>
+    <button type="button" id="lockBtn">Esci</button>
+  </header>
+
+  <div class="banner" id="banner" hidden>
+    <span>La nota è stata modificata da un altro dispositivo.</span>
+    <button type="button" id="useServer">Carica la versione salvata</button>
+    <button type="button" class="primary" id="useMine">Sovrascrivi con la mia</button>
+  </div>
+
+  <textarea id="nota" placeholder="Scrivi qui…" spellcheck="true"></textarea>
+
+  <footer>
+    <span id="count">0 parole</span>
+    <span id="chars">0 caratteri</span>
+    <span class="spacer"></span>
+    <span id="lastSaved"></span>
+  </footer>
+</div>
+
+<script>
+// ======================================================================
+// ==CORE== cifratura + client GitHub (nessun accesso al DOM)
+// ======================================================================
+const FILE = 'nota.enc';
+const KDF_ITERATIONS = 600000;
+const MAX_BYTES = 400 * 1024;   // limite testo: il file cifrato deve restare sotto 1 MB (limite API GitHub)
+
+const enc = new TextEncoder(), dec = new TextDecoder();
+const b64 = (buf) => {
+  const a = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+async function deriveKey(password, salt) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: KDF_ITERATIONS, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function encryptText(key, text) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(text));
+  return { iv: b64(iv), data: b64(ct) };
+}
+async function decryptText(key, iv, data) {
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, key, unb64(data));
+  return dec.decode(pt);
+}
+const packFile = (salt, p) => JSON.stringify({ v: 1, kdf: 'PBKDF2-SHA256-' + KDF_ITERATIONS, salt: b64(salt), iv: p.iv, data: p.data });
+
+function ghClient(token, repo, apiBase = 'https://api.github.com') {
+  const base = `${apiBase}/repos/${repo}`;
+  const headers = { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  return {
+    repoInfo: () => fetch(base, { headers, cache: 'no-store' }),
+    async getFile() {
+      const r = await fetch(`${base}/contents/${FILE}`, { headers, cache: 'no-store' });
+      if (!r.ok) return { status: r.status };
+      const j = await r.json();
+      return { status: 200, sha: j.sha, json: JSON.parse(atob(j.content.replace(/\s/g, ''))) };
+    },
+    async putFile(contentStr, sha) {
+      const body = { message: 'Aggiorna nota', content: btoa(contentStr) };
+      if (sha) body.sha = sha;
+      const r = await fetch(`${base}/contents/${FILE}`, {
+        method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      if (!r.ok) return { status: r.status };
+      const j = await r.json();
+      return { status: r.status, sha: j.content.sha };
+    }
+  };
+}
+// ==END CORE==
+
+// ======================================================================
+// Interfaccia
+// ======================================================================
+(() => {
+  if (typeof document === 'undefined') return;
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get: (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set: (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} },
+    del: (k) => { try { localStorage.removeItem(k); } catch (_) {} },
+  };
+
+  // stato della sessione (la password e la chiave restano solo in memoria)
+  let client = null, key = null, salt = null, sha = null;
+  let dirty = false, saving = false, conflict = false, timer = null, lastSaved = 0, serverCopy = null;
+
+  // ---------- accesso ----------
+  function guessRepo() {
+    const h = location.hostname;
+    if (!h.endsWith('.github.io')) return '';
+    const owner = h.split('.')[0];
+    const first = location.pathname.split('/').filter(Boolean)[0];
+    return owner + '/' + (first && !first.includes('.') ? first : owner + '.github.io');
+  }
+  const savedRepo = store.get('nota.repo'), savedToken = store.get('nota.token');
+  $('repo').value = savedRepo || guessRepo();
+  if (savedRepo && savedToken) {
+    $('setupFields').hidden = true;
+    $('forgetBtn').hidden = false;
+    $('password').focus();
+  }
+  $('forgetBtn').addEventListener('click', () => {
+    store.del('nota.repo'); store.del('nota.token');
+    $('token').value = ''; $('setupFields').hidden = false; $('forgetBtn').hidden = true;
+  });
+
+  const loginErr = (msg) => { $('loginErr').textContent = msg; $('loginErr').hidden = !msg; };
+
+  $('loginForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    loginErr('');
+    const repo = ($('repo').value || store.get('nota.repo') || '').trim();
+    const token = ($('token').value || store.get('nota.token') || '').trim();
+    const pwd = $('password').value;
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return loginErr('Scrivi il repository nel formato utente/nome.');
+    if (!token) return loginErr('Inserisci il token GitHub.');
+
+    const btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Apro…';
+    try {
+      const c = ghClient(token, repo);
+      const info = await c.repoInfo();
+      if (info.status === 401) return loginErr('Token non valido o scaduto.');
+      if (info.status === 404) return loginErr('Repository non trovato (o il token non ha accesso).');
+      if (!info.ok) return loginErr('Errore GitHub (' + info.status + ').');
+
+      const f = await c.getFile();
+      let text = '';
+      if (f.status === 404) {
+        // nota nuova: serve la conferma della password
+        if ($('confirmWrap').hidden) {
+          $('confirmWrap').hidden = false; $('password2').focus();
+          return loginErr('Nessuna nota trovata: ne creo una nuova. Ripeti la password per confermare.');
+        }
+        if (pwd.length < 8) return loginErr('Usa almeno 8 caratteri (meglio 12 o più).');
+        if (pwd !== $('password2').value) return loginErr('Le due password non coincidono.');
+        salt = crypto.getRandomValues(new Uint8Array(16));
+        key = await deriveKey(pwd, salt);
+        const put = await c.putFile(packFile(salt, await encryptText(key, '')), null);
+        if (put.status === 401 || put.status === 403) return loginErr('Il token non può scrivere nel repository: serve il permesso "Contents: Read and write".');
+        if (!(put.status === 200 || put.status === 201)) return loginErr('Impossibile creare la nota (errore ' + put.status + ').');
+        sha = put.sha; lastSaved = Date.now() / 1000;
+      } else if (f.status === 200) {
+        salt = unb64(f.json.salt);
+        key = await deriveKey(pwd, salt);
+        try { text = await decryptText(key, f.json.iv, f.json.data); }
+        catch (_) { key = null; return loginErr('Password errata.'); }
+        sha = f.sha;
+      } else {
+        return loginErr('Errore GitHub (' + f.status + ').');
+      }
+
+      client = c;
+      store.set('nota.repo', repo); store.set('nota.token', token);
+      $('password').value = ''; $('password2').value = ''; $('confirmWrap').hidden = true;
+      openEditor(text);
+    } catch (err) {
+      loginErr('Impossibile contattare GitHub: controlla la connessione.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Entra';
+    }
+  });
+
+  // ---------- editor ----------
+  const ta = $('nota'), statusEl = $('status'), banner = $('banner');
+  const setStatus = (t, cls = '') => { $('statusText').textContent = t; statusEl.className = 'status ' + cls; };
+  const updateCount = () => {
+    const v = ta.value.trim(), words = v ? v.split(/\s+/).length : 0;
+    $('count').textContent = words + (words === 1 ? ' parola' : ' parole');
+    $('chars').textContent = ta.value.length + ' caratteri';
+  };
+  const updateLast = () => {
+    $('lastSaved').textContent = lastSaved
+      ? 'Ultimo salvataggio: ' + new Date(lastSaved * 1000).toLocaleString('it-IT', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+  };
+
+  function openEditor(text) {
+    ta.value = text; dirty = false; conflict = false; banner.hidden = true;
+    $('loginView').hidden = true; $('appView').hidden = false;
+    setStatus('Salvato'); updateCount(); updateLast(); ta.focus();
+  }
+
+  async function save(force = false) {
+    if (!client || !key || saving || (conflict && !force)) return;
+    clearTimeout(timer);
+    const text = ta.value;
+    if (enc.encode(text).length > MAX_BYTES) return setStatus('Nota troppo lunga (max ~400 KB)', 'error');
+    saving = true; setStatus('Salvataggio…', 'dirty');
+    try {
+      const r = await client.putFile(packFile(salt, await encryptText(key, text)), sha);
+      if (r.status === 200 || r.status === 201) {
+        sha = r.sha; lastSaved = Date.now() / 1000; conflict = false; banner.hidden = true;
+        dirty = ta.value !== text;
+        setStatus(dirty ? 'Modifiche non salvate…' : 'Salvato', dirty ? 'dirty' : '');
+        updateLast();
+        if (dirty) timer = setTimeout(save, 1500);
+      } else if (r.status === 409 || r.status === 422) {
+        // qualcun altro (un altro dispositivo) ha salvato nel frattempo
+        const f = await client.getFile();
+        if (f.status !== 200) throw new Error('refetch');
+        try { serverCopy = { text: await decryptText(key, f.json.iv, f.json.data), sha: f.sha }; }
+        catch (_) { setStatus('La nota sul server è stata ricreata con un\'altra password', 'error'); return; }
+        conflict = true; banner.hidden = false;
+        setStatus('Conflitto: scegli una versione', 'error');
+      } else if (r.status === 401 || r.status === 403) {
+        setStatus('Token non valido o senza permessi: copia il testo ed esci', 'error');
+      } else {
+        throw new Error('http ' + r.status);
+      }
+    } catch (_) {
+      setStatus('Errore di rete: riprovo…', 'error');
+      timer = setTimeout(save, 5000);
+    } finally {
+      saving = false;
+    }
+  }
+
+  ta.addEventListener('input', () => {
+    dirty = true; updateCount();
+    if (!conflict) setStatus('Modifiche non salvate…', 'dirty');
+    clearTimeout(timer); timer = setTimeout(save, 2500);   // un salvataggio = un commit: non troppo spesso
+  });
+  $('saveBtn').addEventListener('click', () => save());
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); }
+  });
+  $('useServer').addEventListener('click', () => {
+    if (!serverCopy) return;
+    ta.value = serverCopy.text; sha = serverCopy.sha; conflict = false; dirty = false;
+    banner.hidden = true; setStatus('Salvato'); updateCount();
+  });
+  $('useMine').addEventListener('click', () => {
+    if (serverCopy) sha = serverCopy.sha;
+    conflict = false; save(true);
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && dirty) save(); });
+  window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  $('lockBtn').addEventListener('click', async () => {
+    if (dirty) { await save(); if (dirty) { if (!confirm('Ci sono modifiche non salvate. Uscire comunque?')) return; } }
+    key = null; client = null; salt = null; sha = null; ta.value = '';
+    $('appView').hidden = true; $('loginView').hidden = false;
+    $('setupFields').hidden = !!(store.get('nota.repo') && store.get('nota.token'));
+    $('password').focus();
+  });
+})();
+</script>
+</body>
+</html>
